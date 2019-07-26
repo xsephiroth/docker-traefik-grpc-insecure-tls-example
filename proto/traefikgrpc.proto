@@ -1,0 +1,15 @@
+syntax = "proto3";
+
+package proxy;
+
+service TraefikGRPCProxy {
+    rpc ProxyMe(ProxyMeRequest) returns(ProxyMeResponse) {}
+}
+
+message ProxyMeRequest {
+    string req = 1;
+}
+
+message ProxyMeResponse {
+    string resp = 2;
+}

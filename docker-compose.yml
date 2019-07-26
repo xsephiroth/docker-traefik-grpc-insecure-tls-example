@@ -1,0 +1,58 @@
+version: "3"
+
+services:
+  server:
+    build: server
+    labels:
+      # use h2c protocol
+      - traefik.protocol=h2c
+      # server port
+      - traefik.port=8000
+      # traefik log
+      # "POST /proxy.TraefikGRPCProxy/ProxyMe HTTP/2.0" 200 66 "-" "grpc-go/1.22.1" 1 "PathPrefix-proxy-TraefikGRPCProxy-0" "h2c://172.25.0.3:8000" 2ms
+      - traefik.frontend.rule=PathPrefix:/proxy.TraefikGRPCProxy
+
+  client:
+    build: client
+    depends_on:
+      - traefikproxy
+      - server
+    command: ./client -server traefikproxy:81
+
+  traefikproxy:
+    image: traefik:1.7
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    command: >
+      --accesslog
+      --entrypoints="Name:http Address::81"
+      --defaultentrypoints=http
+      --docker
+
+  clienttls:
+    build: client
+    volumes:
+      - ${PWD}/certs/srv.pem:/certs/srv.pem
+    depends_on:
+      - traefikproxytls
+      - server
+    command: ./client -server traefikproxytls:4443 -tls
+
+  clientshouldtls:
+    build: client
+    depends_on:
+      - traefikproxytls
+      - server
+    # diff with clienttls: no -tls
+    command: ./client -server traefikproxytls:4443
+
+  traefikproxytls:
+    image: traefik:1.7
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ${PWD}/certs:/certs
+    command: >
+      --accesslog
+      --entrypoints="Name:https Address::4443 TLS:/certs/srv.pem,/certs/srv.key"
+      --defaultentrypoints=https
+      --docker
