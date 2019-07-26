@@ -1,6 +1,7 @@
 version: "3"
 
 services:
+  # server is always insecure
   server:
     build: server
     labels:
@@ -12,6 +13,7 @@ services:
       # "POST /proxy.TraefikGRPCProxy/ProxyMe HTTP/2.0" 200 66 "-" "grpc-go/1.22.1" 1 "PathPrefix-proxy-TraefikGRPCProxy-0" "h2c://172.25.0.3:8000" 2ms
       - traefik.frontend.rule=PathPrefix:/proxy.TraefikGRPCProxy
 
+  # client is insecure
   client:
     build: client
     depends_on:
@@ -19,6 +21,7 @@ services:
       - server
     command: ./client -server traefikproxy:81
 
+  # traefikproxy reverse proxy client http2 request to server
   traefikproxy:
     image: traefik:1.7
     volumes:
@@ -29,6 +32,7 @@ services:
       --defaultentrypoints=http
       --docker
 
+  # clienttls request traefikproxytls with tls
   clienttls:
     build: client
     volumes:
@@ -38,6 +42,7 @@ services:
       - server
     command: ./client -server traefikproxytls:4443 -tls
 
+  # clientshouldtls request traefikproxytls with no tls
   clientshouldtls:
     build: client
     depends_on:
@@ -46,6 +51,7 @@ services:
     # diff with clienttls: no -tls
     command: ./client -server traefikproxytls:4443
 
+  # traefikproxytls reverse proxy with tls
   traefikproxytls:
     image: traefik:1.7
     volumes:
